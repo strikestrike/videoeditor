@@ -1,0 +1,16 @@
+Install commands:
+1. Install python(3.10.8)
+2. Add following paths to system PATH
+    C:\Users\{User Name}\AppData\Local\Programs\Python\Python310
+    C:\Users\{User Name}\AppData\Local\Programs\Python\Python310\Scripts
+3. Install necessary modules by running following commands in cmd.
+	pip install SpeechRecognition
+	pip install moviepy
+	pip install tk
+	pip install tkVideoPlayer
+	pip install pytube
+	pip install scipy
+	pip install nltk
+4. Install ImageMagick.exe
+	Please check "ImageMagick Insall.png"
+

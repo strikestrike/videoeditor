@@ -1,11 +1,19 @@
 import speech_recognition as sr
 import nltk
-import moviepy
 from moviepy.video.fx.all import crop
 from moviepy.editor import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip, concatenate_videoclips, CompositeAudioClip
 from tkinter import messagebox
 from tkinter import filedialog
-from tkinter import *
+from tkinter import colorchooser
+from tkinter import Tk
+from tkinter import Label
+from tkinter import E
+from tkinter import W
+from tkinter import EW
+from tkinter import NSEW
+from tkinter import Button
+from tkinter import Entry
+from tkinter import StringVar
 import os
 from collections import Counter
 from threading import *
@@ -13,13 +21,8 @@ import time
 from tkVideoPlayer import TkinterVideo
 from pytube import YouTube  
 from pytube import Search
-
 import requests
 from tqdm import *
-
-import http.client as http
-http.HTTPConnection._http_vsn = 10
-http.HTTPConnection._http_vsn_str = 'HTTP/1.0'
 
 window = Tk()
 window.title("Video Editor")
@@ -28,10 +31,9 @@ window.maxsize(265, 420)
 window.minsize(265, 420)
 window.config(bg="lightgrey")
 
-# nltk.download('punkt')
-
 title = ''
 downloaded = False
+color_code = ''
 
 Label(window, text="Title", bg="lightgrey").grid(row=0, column=0, padx=5, pady=5, sticky=E)
 entry_title = Entry(window, bd=3)
@@ -44,6 +46,10 @@ entry_audio_path.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
 Label(window, text="Music", bg="lightgrey").grid(row=2, column=0, padx=5, pady=5, sticky=E)
 music_audio_path = Entry(window, bd=4)
 music_audio_path.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
+
+Label(window, text="Color", bg="lightgrey").grid(row=3, column=0, padx=5, pady=5, sticky=E)
+entry_color = Entry(window, bd=4)
+entry_color.grid(row=3, column=1, padx=5, pady=5, sticky="ew")
 
 
 def run_downloading_thread():
@@ -66,9 +72,11 @@ def select_audio():
     entry_audio_path.delete(0, "end")
     entry_audio_path.insert(-1, audio_path)
 
+# Function that will be invoked when the
+# color button will be clicked in the main window
 def select_music():
     files = [('MP3 Files', '*.mp3'),
-            ('wmv Files', '*.wmv'),
+            ('wmv Files', '*.wav'),
             ('All Files', '*.*')]
     filename = filedialog.askopenfilename(initialdir = "/",
                                         title = "Select a File",
@@ -78,19 +86,26 @@ def select_music():
     music_audio_path.delete(0, "end")
     music_audio_path.insert(-1, music_path)
 
+# Function that will be invoked when the
+# color button will be clicked in the main window
+def choose_color():
+    # variable to store hexadecimal code of color
+    color_code = colorchooser.askcolor(title ="Choose color")[1]
+    entry_color.delete(0, "end")
+    entry_color.insert(-1, color_code)
+
 btnGetAudio = Button(window, text = "Browse", command = select_audio)
 btnGetAudio.grid(row=1, column=2, columnspan=2, sticky=EW, padx=5, pady=5)
 
 btnGetMusic = Button(window, text = "Browse", command = select_music)
 btnGetMusic.grid(row=2, column=2, columnspan=2, sticky=EW, padx=5, pady=5)
 
-Label(window, text="Speech", bg="lightgrey").grid(row=3, column=0, padx=5, pady=5, sticky=E)
-entry_speech = Entry(window, bd=3)
-entry_speech.grid(row=3, column=1, columnspan=6, padx=5, pady=5, sticky=EW)
+btnGetColor = Button(window, text = "Color", command = choose_color)
+btnGetColor.grid(row=3, column=2, columnspan=2, sticky=EW, padx=5, pady=5)
 
-Label(window, text="Output", bg="lightgrey").grid(row=4, column=0, padx=5, pady=5, sticky=E)
-entry_output = Entry(window, bd=3)
-entry_output.grid(row=4, column=1, columnspan=6, padx=5, pady=5, sticky=EW)
+Label(window, text="Speech", bg="lightgrey").grid(row=4, column=0, padx=5, pady=5, sticky=E)
+entry_speech = Entry(window, bd=3)
+entry_speech.grid(row=4, column=1, columnspan=6, padx=5, pady=5, sticky=EW)
 
 videoplayer = TkinterVideo(master=window, scaled=True, height=10)
 videoplayer.grid(row=5, column=0, rowspan=6, columnspan=6, padx=7, pady=10, sticky = NSEW)
@@ -161,18 +176,19 @@ def download_youtube_video(url):
     print("Trying to download : {}".format(url))
     try:
         youtube_obj = YouTube(url)
+        #mp4files = youtube_obj.streams.filter('mp4') 
+        #youtube_obj.set_filename('org_video.mp4')  
+        #d_video = youtube_obj.get(mp4files[-1].extension, mp4files[-1].resolution)
+        d_video = youtube_obj.streams.get_highest_resolution()        
+        try:  
+            d_video.download(os.path.dirname(os.path.realpath(__file__)), "org_video.mp4")
+            print('downloading video completed! :' + url)
+            return True
+        except:  
+            print('downloading video failed! :' + url)
     except Exception as e:
         print("Could not download file {}".format(url))
-    mp4files = youtube_obj.streams.filter('mp4') 
-    youtube_obj.set_filename('org_video.mp4')  
-    d_video = youtube_obj.get(mp4files[-1].extension, mp4files[-1].resolution) 
-    try:  
-        d_video.download(os.path.dirname(os.path.realpath(__file__)))
-        print('downloading video completed! :' + url)
-        return True
-    except:  
-        print('downloading video failed! :' + url)
-    return False
+        return False
 
 def download_video_related2audio():
     btn_search_text.set("Recognizing audio ...")
@@ -187,7 +203,7 @@ def download_video_related2audio():
     keywords = get_most_frequent_words(speech)
     for v in get_youtube_video_urls(keywords):
         time.sleep(1)
-        is_downloaded = download_youtube_video(v.match_url)
+        is_downloaded = download_youtube_video('https://www.youtube.com/watch?v=' + v.video_id)
         if (is_downloaded == True): break
     
     if (is_downloaded == False):
@@ -200,6 +216,7 @@ def download_video_related2audio():
 def output_video():
     audio_path = entry_audio_path.get()
     music_path = music_audio_path.get()
+    color_code = entry_color.get()
     title = entry_title.get()
     if (audio_path == ''):
       messagebox.showerror("Error","Please fill the audio field.")
@@ -207,6 +224,8 @@ def output_video():
     if (title == ''):
       messagebox.showerror("Error","Please fill the title field.")
       return
+    if (color_code == ''):
+        color_code = 'lightgreen'
 
     org_video_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "org_video.mp4")
     final_video_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "final_video.mp4")
@@ -217,18 +236,19 @@ def output_video():
     
     video_clip = video_clip.resize(((w * (1920 /1080)), 1920 ))
     # video_clip = cropClip.resize(width=1080)
-    video_clip = crop(video_clip, width=1080, height=1920, x_center=w/2, y_center=h)
+    video_clip = moviepy.video.fx.all.crop(video_clip, width=1080, height=1920, x_center=w/2, y_center=h)
 
     if (music_path != ''):
         music_clip = AudioFileClip(music_path)
         # new_music_clip = CompositeAudioClip([video_clip.audio, music_clip])
         music_clip = moviepy.audio.fx.all.audio_loop( music_clip, duration=video_clip.duration)
+        video_clip.audio = music_clip
 
     w, h = video_clip.size
     fps = video_clip.fps
 
     intro_duration = 2
-    intro_text = TextClip(title, fontsize=70, color='white', bg_color="blue", size=video_clip.size)
+    intro_text = TextClip(title, fontsize=100, color='lightgreen', bg_color=color_code, font="Arial-bold", kerning=5, size=video_clip.size)
     intro_text = intro_text.set_duration(intro_duration)
     intro_text = intro_text.set_fps(fps)
     intro_text = intro_text.set_pos("center")
@@ -245,7 +265,7 @@ def output_video():
     watermark_size = 50
     text_clips = []
     for x in range(text_show_count):
-        watermark_text = TextClip(sentences[x], fontsize=watermark_size, color='blue', align='south', method='caption', size=video_clip.size)
+        watermark_text = TextClip(sentences[x], fontsize=watermark_size, color='white', font="Arial-bold", align='south', method='caption', size=video_clip.size)
         watermark_text = watermark_text.set_fps(fps)
         watermark_text = watermark_text.set_duration(5)
         watermark_text = watermark_text.set_start(5 * x)
